@@ -47,8 +47,6 @@ dotnet build DevDock.sln
 dotnet run --project src/DevDock.Desktop/DevDock.Desktop.csproj
 ```
 
-This repository is private; cloning requires GitHub access. Alternatively open `DevDock.sln` in Visual Studio or Rider and start `DevDock.Desktop`.
-
 The dashboard starts at **1400 × 900** and supports a minimum of **1100 × 700**. Project cards wrap their content; the two dashboard content columns scroll independently.
 
 ## Working with projects
