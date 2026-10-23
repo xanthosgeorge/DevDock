@@ -5,8 +5,14 @@ using DevDock.Desktop.Views;
 
 namespace DevDock.Desktop.Services;
 
-public sealed class AvaloniaProjectWorkspaceInteraction(Window owner) : IProjectWorkspaceInteraction
+public sealed class AvaloniaProjectWorkspaceInteraction(Window owner) : IProjectWorkspaceInteraction, IPortInteraction
 {
+    public Task<bool> ConfirmStopAsync(PortInfo port, bool owned) => new WorkspaceDialogWindow(new()
+    {
+        Title = "Stop process?", ConfirmLabel = "Stop Process",
+        Description = $"{port.ProcessName}\nPID {port.ProcessId}\n\nListening on port {port.Port}.\n\n"
+            + (owned ? "This will terminate the DevDock-owned project process tree." : "This will terminate this external process. No elevation will be requested.")
+    }).ShowDialog<bool>(owner);
     private readonly Dictionary<Guid, ProjectDetailsWindow> _windows = [];
     public Task<bool> ConfirmRemovalAsync(string name, bool running) => new WorkspaceDialogWindow(new()
     {

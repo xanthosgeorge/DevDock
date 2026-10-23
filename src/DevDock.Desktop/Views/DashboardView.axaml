@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:DevDock.Desktop.ViewModels" xmlns:c="using:DevDock.Desktop.Controls" x:Class="DevDock.Desktop.Views.DashboardView" x:DataType="vm:MainWindowViewModel">
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:DevDock.Desktop.ViewModels" xmlns:v="using:DevDock.Desktop.Views" xmlns:c="using:DevDock.Desktop.Controls" x:Class="DevDock.Desktop.Views.DashboardView" x:DataType="vm:MainWindowViewModel">
   <Grid>
     <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="{Binding ProjectWidth}" /><ColumnDefinition Width="{Binding ColumnGap}" /><ColumnDefinition Width="{Binding EnvironmentWidth}" /></Grid.ColumnDefinitions>
@@ -10,7 +10,7 @@
               <TextBlock Text="Your workspace starts here" FontSize="21" FontWeight="SemiBold" />
               <TextBlock Text="Add your first local project to inspect Git, run it and read its output." Classes="muted" TextWrapping="Wrap" LineHeight="22" />
               <Button Classes="primary" Content="{Binding Dashboard.AddProjectLabel}" Command="{Binding Dashboard.AddProjectCommand}" HorizontalAlignment="Left" />
-              <TextBlock Text="Imported projects are kept for this application session." Classes="caption" TextWrapping="Wrap" />
+              <TextBlock Text="Your projects are saved automatically and restored when DevDock opens." Classes="caption" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <ItemsControl ItemsSource="{Binding Dashboard.Projects}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:ProjectViewModel"><c:ProjectCard /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
@@ -30,7 +30,16 @@
             <StackPanel Spacing="12">
               <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="⑂" FontSize="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,9,0" /><TextBlock Grid.Column="1" Classes="section" Text="Open Ports" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="link" Content="View All" Command="{Binding NavigateCommand}" CommandParameter="Ports" /></Grid>
               <Border Height="1" Background="{DynamicResource BorderBrush}" />
-              <TextBlock Text="Port detection is not available yet" Classes="muted" TextWrapping="Wrap" LineHeight="21" />
+              <TextBlock Text="{Binding Dashboard.Ports.Summary}" Classes="caption" />
+              <TextBlock Text="{Binding Dashboard.Ports.Error}" IsVisible="{Binding Dashboard.Ports.HasError}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" />
+              <TextBlock Text="No listeners to show. Refresh to inspect local ports." IsVisible="{Binding !Dashboard.Ports.HasPreview}" Classes="muted" TextWrapping="Wrap" />
+              <ItemsControl ItemsSource="{Binding Dashboard.Ports.Preview}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:PortRowViewModel">
+                <Grid ColumnDefinitions="60,*,*" ColumnSpacing="8" Margin="0,4">
+                  <TextBlock Text="{Binding Port}" Classes="mono" />
+                  <TextBlock Grid.Column="1" Text="{Binding Process}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Process}" />
+                  <TextBlock Grid.Column="2" Text="{Binding Project}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Project}" />
+                </Grid>
+              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
             </StackPanel>
           </Border>
           <Border Classes="panel" IsVisible="{Binding ShowApis}">
@@ -43,6 +52,7 @@
         </StackPanel>
       </ScrollViewer>
     </Grid>
+    <Grid IsVisible="{Binding ShowPortsWorkspace}"><v:PortsView DataContext="{Binding Dashboard.Ports}" /></Grid>
     <Border Classes="panel" IsVisible="{Binding ShowLogs}" VerticalAlignment="Top" Padding="24">
       <StackPanel Spacing="16">
         <TextBlock Classes="section" Text="Environment activity" />

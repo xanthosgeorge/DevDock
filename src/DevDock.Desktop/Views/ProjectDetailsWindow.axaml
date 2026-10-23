@@ -10,6 +10,20 @@
     </Grid>
     <ItemsControl Grid.Row="1" ItemsSource="{Binding Project.Technologies}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><c:TechnologyBadge Text="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
     <StackPanel Grid.Row="2" Spacing="6">
+      <Border Classes="panel" IsVisible="{Binding HasEndpoints}" Padding="12">
+        <StackPanel Spacing="6">
+          <TextBlock Text="{Binding EndpointHeading}" FontWeight="SemiBold" />
+          <ScrollViewer MaxHeight="140" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Endpoints}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:EndpointViewModel">
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,3">
+                <StackPanel><TextBlock Text="{Binding Label}" Classes="caption" /><SelectableTextBlock Text="{Binding Url}" Foreground="{DynamicResource AccentBrush}" TextWrapping="Wrap" /></StackPanel>
+                <Button Grid.Column="1" Content="{Binding CopyLabel}" Command="{Binding CopyCommand}" />
+                <Button Grid.Column="2" Content="Open" Command="{Binding OpenCommand}" />
+              </Grid>
+            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
       <TextBlock Text="{Binding Operation}" Classes="caption" />
       <Border Classes="panel" IsVisible="{Binding HasError}" Padding="12"><TextBlock Text="{Binding Error}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" /></Border>
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
@@ -33,7 +47,8 @@
           </StackPanel></Border>
           <Border Classes="panel"><StackPanel Spacing="10">
             <TextBlock Text="Workspace entry" Classes="section" />
-            <TextBlock Text="This project is kept in memory for this session. Removing it from DevDock does not delete any local files." Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="This project is saved in your local workspace and restored when DevDock opens. Removing it from DevDock does not delete any project files." Classes="muted" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Project.LocationNotice}" IsVisible="{Binding Project.HasLocationNotice}" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" />
             <Button Content="Remove from DevDock" Command="{Binding Project.RemoveCommand}" HorizontalAlignment="Left" />
           </StackPanel></Border>
         </StackPanel></ScrollViewer>

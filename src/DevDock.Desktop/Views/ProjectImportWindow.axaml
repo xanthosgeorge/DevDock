@@ -44,7 +44,7 @@
             <ItemsControl ItemsSource="{Binding Warnings}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" Classes="caption" TextWrapping="Wrap" Margin="0,0,0,6" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
           </StackPanel>
         </Border>
-        <TextBlock Text="Added projects stay in memory for this session. Open a project to run it, inspect Git and view output." Classes="caption" TextWrapping="Wrap" />
+        <TextBlock Text="Added projects are saved locally and restored when DevDock opens. Open a project to run it, inspect Git and view output." Classes="caption" TextWrapping="Wrap" />
       </StackPanel>
     </ScrollViewer>
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">

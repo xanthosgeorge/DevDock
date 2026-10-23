@@ -6,9 +6,9 @@ DevDock is a cross-platform desktop control center for local software developmen
 
 ## Current status
 
-**DevDock v0.3 — Project Control + Git Workspace**
+**DevDock v0.3 — Project Control, Git Workspace, Runtime Endpoints & Ports**
 
-DevDock starts with an empty workspace. Add local projects to use discovery, project execution and Git operations. Imported **LOCAL** projects remain in memory for the current application session. Docker, open-port detection, API health, system metrics and the workspace activity feed are not implemented yet; their panels show availability messages without fabricated records or measurements.
+DevDock starts with an empty project workspace on first use and discovers real listening TCP sockets on the machine. Add local projects to use discovery, execution and Git operations. Imported **LOCAL** projects are saved automatically and restored on subsequent launches. Windows system metrics show real CPU, physical RAM and C: disk usage. Docker, API health and the workspace activity feed are not implemented yet; their panels show availability messages without fabricated records or measurements.
 
 ### Available now
 
@@ -20,6 +20,11 @@ DevDock starts with an empty workspace. Add local projects to use discovery, pro
 - Real Git branch, changes, staged changes, remotes and linear commit history.
 - Fetch, fast-forward-only Pull, Stage Selected, Stage All, per-file Stage/Unstage, Unstage Selected and local Commit.
 - Remove from DevDock with confirmation, without deleting project files.
+- Persistent local project list, restored automatically when DevDock opens.
+- Persistent runtime endpoint header, with multiple URLs, Copy and default-browser Open.
+- Real listening TCP ports in a sortable DataGrid, with process/PID, reliable project associations, local search, filters, asynchronous Refresh and confirmed Stop Process.
+- Dashboard preview of the first five listening sockets, with View All navigation.
+- Live Windows CPU usage, physical RAM in use/total, and C: disk space used/total in the sidebar.
 
 ## Tech stack
 
@@ -31,7 +36,7 @@ DevDock starts with an empty workspace. Add local projects to use discovery, pro
 | Discovery | Bounded local manifest inspection |
 | Git | Locally installed Git CLI |
 | Execution | Tracked native processes with redirected output |
-| State | In-memory session data; no database |
+| State | Local JSON project workspace; runtime state stays in memory; no database |
 
 Windows and macOS are the target platforms. Windows has been used for development and runtime verification. macOS execution and packaging remain unverified.
 
@@ -60,6 +65,12 @@ The dashboard starts at **1400 × 900** and supports a minimum of **1100 × 700*
 
 Removing a project never deletes its directory, source, solution or `.git`. Cancelling removal leaves the entry intact. Closing DevDock stops its active project processes; closing a detail window alone keeps its process running. If a Git or launch operation is active, finish that operation before closing the main window.
 
+### Saved workspace
+
+Project additions and confirmed removals are saved immediately in a versioned `workspace.json`, without waiting for shutdown. Windows uses `%LOCALAPPDATA%\DevDock\workspace.json`; macOS uses `~/Library/Application Support/DevDock/workspace.json`. The file stores project IDs, display names, absolute folder paths, order and technology badges. It never stores process handles, output, credentials or Git working state, and does not restart projects automatically.
+
+Writes use a temporary file in the same directory and replace the previous snapshot after flushing it. Failed saves leave the displayed project list unchanged and show an error. If the saved workspace cannot be read or has an unsupported format, DevDock preserves the file, displays the problem and offers **Retry loading workspace** before allowing new imports. Missing project folders remain listed with an availability notice, rather than disappearing. Removing an entry also removes it from the saved list; project source files remain untouched. Launch-target choices remain session-specific.
+
 ### Supported launch configurations
 
 | Project type | Launch behavior |
@@ -75,6 +86,33 @@ Libraries and test projects are excluded from automatic .NET launch candidates. 
 Run is an explicit request to execute the selected project's code or named package script. Review projects you import before running them. DevDock itself does not install npm dependencies; normal tool behavior still applies, including .NET restore/build and Maven/Gradle dependency resolution.
 
 Output retains the latest **2,000 lines** per run, with a limit of **8,192 characters per line**. It is not an interactive terminal. Daemonized/background jobs that outlive their launching process are not supported; use foreground development commands.
+
+### Runtime endpoints
+
+Known startup messages from ASP.NET Core (`Now listening on:`), Angular/Vite (`Local:`) and Spring Boot's embedded Tomcat are parsed for valid HTTP/HTTPS endpoints. Arbitrary URLs in logs are ignored. The first `Project` profile in the selected .NET target's `Properties/launchSettings.json` supplies expected, explicitly unconfirmed URLs. Actual runtime messages replace those expectations. ANSI escape sequences are stripped, duplicate URLs are removed, and at most 20 endpoints are retained per run.
+
+Endpoints remain in the Project Details header across Overview/Git/Output. A normal application URL is preferred over `/swagger` or `/health`, then frontend URLs are preferred. Copy displays a temporary **Copied** label. Open uses Avalonia's platform launcher and the default browser. After stopping, URLs are labelled **Last known endpoints · not running**. Starting another run resets them; clearing output does not erase endpoints.
+
+## Ports workspace
+
+**Ports** lists local TCP listeners only, including IPv4/IPv6, address, process, PID, associated project, confirmed endpoint and actions. IPv4/IPv6 sockets are separate rows, so the summary counts listening sockets rather than distinct port numbers. Click a column header to sort; Port ascending is the initial order. Resize columns or scroll horizontally to inspect all fields; the Port column stays frozen.
+
+Search immediately filters port, PID, process, project, address and endpoint. **All**, **DevDock Projects** and **Other Processes** filters work locally. Each row's **•••** menu offers **Open**, **Copy URL** where confirmed, and **Stop Process** where eligible. Refresh runs on startup, when entering Ports, or explicitly; it preserves search/filter state. Scans do not overlap, have a cancellation/timeout token and a Cancel refresh action. There is no background polling timer. Existing rows remain visible with an error if a scan fails.
+
+- **Windows:** `GetExtendedTcpTable` reads native IPv4/IPv6 `OWNER_PID_LISTENER` tables. Process names/start times and Toolhelp parent relationships are resolved off the UI thread. Inaccessible/exited process information falls back to Unknown.
+- **macOS:** `/usr/sbin/lsof -nP -a -iTCP -sTCP:LISTEN -Fpcn` supplies listeners; `/bin/ps -axo pid=,ppid=` supplies ancestry. Only processes visible to the user's account may appear. This implementation is unit-tested with captured-format fixtures; live macOS execution remains unverified.
+- **Association:** PID plus OS process start time must match a running DevDock session, directly or through a validated parent chain. Executable names and port numbers alone never assign a project. A port URL requires an associated process and a confirmed runtime endpoint with matching port/local bind address. Expected launch-settings URLs alone do not enable browser actions. External services have no inferred HTTP URLs.
+- **Stop Process:** always requires a DevDock confirmation. The listener and process start time are rechecked after confirmation to reject stale rows/PID reuse. Owned project trees stop through the existing runner; external stops affect only the selected process. System processes, DevDock and its ancestors, and processes without a verifiable start time are ineligible. No privilege elevation or automatic conflict termination occurs; access-denied errors are displayed.
+
+This is a snapshot, not a reachability or health check. Association may remain unassigned if ancestry or start times cannot be read. Detached processes, shared runtimes and remote-host URLs are not inferred.
+
+## System metrics
+
+The sidebar refreshes approximately every **2 seconds**, with one asynchronous scan at a time. CPU is machine usage over the latest interval, calculated from Windows `GetSystemTimes` idle/kernel/user counter deltas. The first sample warms up the counters. Kernel time includes idle time, which is subtracted once. On machines with more than 64 logical processors this API reports the calling thread's primary processor group.
+
+**Memory** is physical RAM in use / total usable physical RAM, read with `GlobalMemoryStatusEx` (`TotalPhys - AvailPhys`). It does not display virtual memory, page-file usage or DevDock's own process memory. **Disk (C:)** is used / total capacity of **C:**, using `DriveInfo.TotalSize - TotalFreeSpace`, regardless of the project or DevDock installation directory. This is disk space, not disk activity. Capacity values use **GiB** (1,024³ bytes); slim bars show utilization percentages.
+
+Native reads run off the UI thread without PowerShell, WMI polling, extra packages or elevation. Closing DevDock cancels the refresh loop. Failures show an unavailable value/message and retry; they do not leave old measurements displayed as live. CPU, RAM and disk reads fail independently. The service is isolated behind `ISystemMetricsService`; macOS and other platforms currently show an explicit unavailable state for system metrics.
 
 ## Git workspace
 
@@ -128,7 +166,7 @@ tests/DevDock.Desktop.Tests/
                    Discovery, Git parsing/integration, run detection, process lifecycle and removal tests
 ```
 
-One desktop application project plus one test project. `ICommandRunner` handles finite commands; `IProjectRunnerService` owns long-running processes. `IGitService` wraps local Git. `IProjectRunConfigurationService` selects supported launch candidates. UI interactions remain in Avalonia adapters; filesystem/process logic stays in services.
+One desktop application project plus one test project. `ICommandRunner` handles finite commands; `IProjectRunnerService` owns long-running processes. `IGitService` wraps local Git. `IProjectRunConfigurationService` selects supported launch candidates. `IPortService` isolates Windows/macOS scans; `IPortProcessControl` revalidates termination requests; `IPlatformService` handles clipboard/browser actions. `IWorkspaceStore` isolates JSON project-list persistence. UI interactions remain in Avalonia adapters; filesystem/process logic stays in services.
 
 ## Verification
 
@@ -146,6 +184,12 @@ Manual checks:
 4. Import a project with two runnable targets; choose one, read Output, Stop it and run again to check the remembered choice.
 5. Cancel removal once, then confirm removal. Check the project directory and `.git` remain untouched.
 6. Import a non-Git project and a project without a supported launch command; both should remain usable with clear explanations.
+7. Start an ASP.NET Core or Angular/Vite development server. Confirm URLs stay visible across all detail tabs, Copy/Open work, and stopping shows Last known endpoints. Clear Output and restart to check endpoint lifetime.
+8. Open Ports, compare a known local listener's port/PID with OS tools, search by PID/project/address, switch filters and sort the Port/Process/PID/Project columns. Refresh while filtered and verify the state remains.
+9. Check a database port has no guessed HTTP URL; check a DevDock-started child process receives its project and confirmed URL. Use Dashboard → View All to reach the full grid.
+10. In a disposable test service, cancel Stop Process once, then confirm it. Verify only the selected external process or owned project tree stops. Refresh a stale row and check a protected/inaccessible process fails safely.
+11. Add a project, close DevDock and reopen it. Verify its card returns without starting a process. Cancel removal, reopen and check it remains; confirm removal, reopen and check it stays removed while the source folder survives.
+12. Compare sidebar CPU/RAM with Windows Task Manager over several refreshes; compare Disk (C:) with C: drive properties, allowing for GiB formatting and different sampling times. Close DevDock and check the metrics loop stops.
 
 ## Roadmap
 
@@ -153,7 +197,10 @@ Manual checks:
 | --- | --- |
 | v0.1 | Dashboard UI prototype |
 | v0.2 | Local project discovery |
-| **v0.3** | **Project control and Git workspace** |
-| Future | Persistence, process/port discovery, IDE/terminal launching, Docker, service orchestration, API health, logs/system metrics and platform packaging |
+| **v0.3** | **Project control, Git workspace, runtime endpoints and listening ports** |
+| Next step | Continue the planned roadmap and add configuration manipulation: inspect and edit project configuration files from DevDock |
+| Future | IDE/terminal launching, Docker, service orchestration, API health, workspace activity, macOS system metrics and platform packaging |
 
-The current implementation stops at v0.3. Git push, branch management, merge/rebase, conflict resolution, stash UI and hosting-service APIs are outside this release. Docker, ports, API health and system metrics remain unavailable; no sample data is displayed.
+The next step will also include **configuration manipulation**, alongside the features already planned above. Configuration editing is planned work and is not available in the current release.
+
+Git push, branch management, merge/rebase, conflict resolution, stash UI and hosting-service APIs are outside this release. Docker and API health remain unavailable; no sample data is displayed. UDP, firewall management, packet inspection, health probing and multi-service orchestration are outside this iteration. Local workspace persistence and Windows system metrics extend the original v0.3 scope at the user's request.

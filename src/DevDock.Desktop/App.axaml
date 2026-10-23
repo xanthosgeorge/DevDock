@@ -4,6 +4,7 @@
   </ResourceDictionary.MergedDictionaries></ResourceDictionary></Application.Resources>
   <Application.Styles>
     <FluentTheme />
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
     <StyleInclude Source="avares://DevDock.Desktop/Styles/Typography.axaml" />
     <StyleInclude Source="avares://DevDock.Desktop/Styles/Controls.axaml" />
   </Application.Styles>

@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DevDock.Desktop.ViewModels" x:Class="DevDock.Desktop.Views.PortsView" x:DataType="vm:PortsWorkspaceViewModel">
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
+    <Grid ColumnDefinitions="*,300,Auto" ColumnSpacing="12">
+      <TextBlock Text="{Binding Summary}" Classes="section" VerticalAlignment="Center" TextWrapping="Wrap" />
+      <TextBox Grid.Column="1" PlaceholderText="Search ports, processes or projects…" Text="{Binding Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+      <Button Grid.Column="2" Content="{Binding RefreshLabel}" Command="{Binding RefreshCommand}" />
+    </Grid>
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+      <ComboBox ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" MinWidth="180" />
+      <TextBlock Grid.Column="1" Text="{Binding Message}" Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap" />
+      <Button Grid.Column="2" Content="Cancel refresh" Command="{Binding CancelRefreshCommand}" IsVisible="{Binding IsBusy}" />
+    </Grid>
+    <StackPanel Grid.Row="2" Spacing="6">
+      <TextBlock Text="{Binding Error}" IsVisible="{Binding HasError}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" />
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+    </StackPanel>
+    <Border Grid.Row="3" Classes="panel" Padding="0" ClipToBounds="True">
+      <Grid>
+        <DataGrid x:Name="PortsGrid" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="True"
+                  CanUserResizeColumns="True" FrozenColumnCount="1" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="48"
+                  Background="{DynamicResource CardBrush}" Foreground="{DynamicResource TextBrush}" BorderThickness="0"
+                  HorizontalGridLinesBrush="{DynamicResource BorderBrush}" SelectionMode="Single">
+          <DataGrid.Columns>
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Port" Binding="{Binding Port}" SortMemberPath="Port" Width="65" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Protocol" Binding="{Binding Protocol}" SortMemberPath="Protocol" Width="95" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Process" Binding="{Binding Process}" SortMemberPath="Process" Width="150" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="PID" Binding="{Binding Pid}" SortMemberPath="Pid" Width="85" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Project" Binding="{Binding Project}" SortMemberPath="Project" Width="130" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Address" Binding="{Binding Address}" SortMemberPath="Address" Width="140" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Endpoint" Binding="{Binding Endpoint}" SortMemberPath="Endpoint" Width="*" MinWidth="180" />
+            <DataGridTextColumn x:DataType="vm:PortRowViewModel" Header="Status" Binding="{Binding Status}" SortMemberPath="Status" Width="100" />
+            <DataGridTemplateColumn Header="Actions" Width="85" CanUserSort="False">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate x:DataType="vm:PortRowViewModel">
+                  <Button Content="•••" Margin="8,4" ToolTip.Tip="Port actions">
+                    <Button.Flyout><Flyout><StackPanel Spacing="6" MinWidth="155">
+                      <Button Content="Open" Command="{Binding OpenCommand}" IsVisible="{Binding HasEndpoint}" HorizontalAlignment="Stretch" />
+                      <Button Content="Copy URL" Command="{Binding CopyCommand}" IsVisible="{Binding HasEndpoint}" HorizontalAlignment="Stretch" />
+                      <Button Content="Stop Process" Command="{Binding StopCommand}" HorizontalAlignment="Stretch" ToolTip.Tip="Requires confirmation; protected and unverifiable processes cannot be stopped." />
+                    </StackPanel></Flyout></Button.Flyout>
+                  </Button>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel IsVisible="{Binding IsEmpty}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" Margin="24">
+          <TextBlock Text="No matching listening ports" FontSize="20" HorizontalAlignment="Center" />
+          <TextBlock Text="Refresh or adjust your search and filter." Classes="muted" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <TextBlock Grid.Row="4" Text="{Binding ResultCount}" Classes="caption" />
+  </Grid>
+</UserControl>

@@ -13,4 +13,5 @@
   <Style Selector="Border.service"><Setter Property="Background" Value="{DynamicResource ElevatedBrush}" /><Setter Property="CornerRadius" Value="6" /><Setter Property="Padding" Value="10,8" /><Setter Property="Margin" Value="0,0,8,6" /></Style>
   <Style Selector="ProgressBar"><Setter Property="Height" Value="3" /><Setter Property="Foreground" Value="{DynamicResource AccentBrush}" /><Setter Property="Background" Value="{DynamicResource BorderBrush}" /></Style>
   <Style Selector="ToolTip"><Setter Property="Background" Value="{DynamicResource ElevatedBrush}" /></Style>
+  <Style Selector="DataGridColumnHeader"><Setter Property="Background" Value="{DynamicResource ElevatedBrush}" /><Setter Property="Foreground" Value="{DynamicResource MutedBrush}" /><Setter Property="MinHeight" Value="38" /></Style>
 </Styles>

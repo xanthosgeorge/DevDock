@@ -14,22 +14,37 @@ public partial class DashboardViewModel : ObservableObject
     private readonly IGitService _git;
     private readonly IProjectRunnerService _runner;
     private readonly IProjectRunConfigurationService _runConfigurations;
+    private readonly IPlatformService? _platform;
+    private readonly IWorkspaceStore? _workspaceStore;
+    private readonly SemaphoreSlim _workspaceChanges = new(1, 1);
+    private bool _workspaceLoaded;
+    [ObservableProperty] private bool _isLoadingWorkspace;
+    [ObservableProperty] private bool _isSavingWorkspace;
+    [ObservableProperty] private string _workspaceError = "";
+    public bool HasWorkspaceError => WorkspaceError.Length > 0;
+    public bool NeedsWorkspaceReload => !_workspaceLoaded && HasWorkspaceError;
+    private bool CanAddProject => _workspaceLoaded && !IsLoadingWorkspace && !IsSavingWorkspace;
+    partial void OnIsLoadingWorkspaceChanged(bool value) { AddProjectCommand.NotifyCanExecuteChanged(); OnPropertyChanged(nameof(AddProjectLabel)); }
+    partial void OnIsSavingWorkspaceChanged(bool value) => AddProjectCommand.NotifyCanExecuteChanged();
+    partial void OnWorkspaceErrorChanged(string value) { OnPropertyChanged(nameof(HasWorkspaceError)); OnPropertyChanged(nameof(NeedsWorkspaceReload)); }
+    public PortsWorkspaceViewModel Ports { get; }
     public ObservableCollection<ProjectViewModel> Projects { get; } = [];
     public string RunningSummary => $"{Projects.Count(p => p.IsRunning)} Running";
     public bool IsEmpty => Projects.Count == 0;
     public string ProjectSummary => $"{Projects.Count} Projects";
     public string ProjectCountLabel => $"{Projects.Count} projects";
-    [ObservableProperty] private string _feedback = "Add a local project to get started · projects are kept for this session";
+    [ObservableProperty] private string _feedback = "Add a local project to get started · your workspace is saved automatically";
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isScanning;
-    public string AddProjectLabel => IsScanning ? "Scanning project…" : "＋  Add Project";
+    public string AddProjectLabel => IsLoadingWorkspace ? "Loading workspace…" : IsScanning ? "Scanning project…" : "＋  Add Project";
     public event Action? ProjectImported;
     public string RefreshLabel => IsRefreshing ? "↻  Refreshing…" : "↻  Refresh";
     partial void OnIsRefreshingChanged(bool value) => OnPropertyChanged(nameof(RefreshLabel));
     partial void OnIsScanningChanged(bool value) => OnPropertyChanged(nameof(AddProjectLabel));
     public DashboardViewModel(IProjectDiscoveryService? discovery = null, IProjectImportInteraction? importInteraction = null,
         IProjectWorkspaceInteraction? workspaceInteraction = null, IGitService? git = null,
-        IProjectRunnerService? runner = null, IProjectRunConfigurationService? runConfigurations = null)
+        IProjectRunnerService? runner = null, IProjectRunConfigurationService? runConfigurations = null,
+        IPortService? ports = null, IPlatformService? platform = null, IPortInteraction? portInteraction = null, IWorkspaceStore? workspaceStore = null)
     {
         _discovery = discovery ?? new ProjectDiscoveryService();
         _importInteraction = importInteraction;
@@ -37,19 +52,82 @@ public partial class DashboardViewModel : ObservableObject
         _git = git ?? new GitCliService(new CommandRunner());
         _runner = runner ?? new ProjectRunnerService();
         _runConfigurations = runConfigurations ?? new ProjectRunConfigurationService(_discovery);
+        _platform = platform;
+        _workspaceStore = workspaceStore;
+        _workspaceLoaded = workspaceStore is null;
+        var portService = ports ?? PortServiceFactory.Create();
+        Ports = new(portService, () => Projects.Where(p => p.Workspace?.Process is { IsRunning: true }).Select(p => new TrackedPortProject(p.Name, p.Workspace!.Process!)).ToArray(),
+            new PortProcessControl(portService, _runner), portInteraction, platform);
         Projects.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(ProjectSummary));
             OnPropertyChanged(nameof(ProjectCountLabel));
             OnPropertyChanged(nameof(RunningSummary));
             OnPropertyChanged(nameof(IsEmpty));
+            Ports.Reassociate();
         };
+    }
+
+    [RelayCommand] public async Task InitializeAsync()
+    {
+        await _workspaceChanges.WaitAsync();
+        try
+        {
+            if (_workspaceLoaded) return;
+            IsLoadingWorkspace = true; WorkspaceError = "";
+            var saved = await _workspaceStore!.LoadAsync();
+            var restored = await Task.Run(() => saved.Select(entry => new ProjectViewModel
+            {
+                Id = entry.Id, Name = entry.Name, Path = entry.Path, Technologies = entry.Technologies,
+                LastActivity = "Saved workspace", GitStatus = "Git not checked",
+                LocationNotice = Directory.Exists(entry.Path) ? "" : "Project folder is unavailable. Check its location or remove this entry."
+            }).ToArray());
+            foreach (var project in restored)
+            {
+                if (ContainsProject(project.Path)) continue;
+                AttachProject(project); Projects.Add(project);
+            }
+            if (Projects.FirstOrDefault() is { } first) SelectProject(first);
+            _workspaceLoaded = true;
+            Feedback = $"Workspace restored · {Projects.Count} saved projects";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine(ex);
+            WorkspaceError = "Unable to load the saved workspace. Your saved file has been kept unchanged. " + ex.Message;
+            Feedback = "Workspace could not be restored. Retry loading before adding projects.";
+        }
+        finally
+        {
+            IsLoadingWorkspace = false; OnPropertyChanged(nameof(NeedsWorkspaceReload));
+            AddProjectCommand.NotifyCanExecuteChanged(); _workspaceChanges.Release();
+        }
+    }
+
+    private async Task SaveProjectsAsync(IEnumerable<ProjectViewModel> projects)
+    {
+        if (_workspaceStore is null) return;
+        if (!_workspaceLoaded) throw new InvalidOperationException("Load the saved workspace before changing it.");
+        IsSavingWorkspace = true;
+        try
+        {
+            await _workspaceStore.SaveAsync(projects.Select(p => new SavedProject(p.Id, p.Name, p.Path, p.Technologies)).ToArray());
+            WorkspaceError = "";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Trace.WriteLine(ex);
+            WorkspaceError = "Unable to save the workspace. The project list was not changed. " + ex.Message;
+            throw;
+        }
+        finally { IsSavingWorkspace = false; }
     }
     private void AttachProject(ProjectViewModel project)
     {
         project.Selected += SelectProject;
         project.StateChanged += () => OnPropertyChanged(nameof(RunningSummary));
-        project.Workspace = new(project, _git, _runner, _runConfigurations, _workspaceInteraction);
+        project.Workspace = new(project, _git, _runner, _runConfigurations, _workspaceInteraction, _platform);
+        project.Workspace.RuntimeChanged += Ports.Reassociate;
         project.OpenRequested += (item, tab) =>
         {
             SelectProject(item);
@@ -73,11 +151,17 @@ public partial class DashboardViewModel : ObservableObject
         {
             if (!await _workspaceInteraction.ConfirmRemovalAsync(project.Name, project.IsRunning)) return false;
             if (project.Workspace is not null) await project.Workspace.StopForRemovalAsync();
-            _workspaceInteraction.CloseProject(project.Id);
-            var wasSelected = project.IsSelected;
-            project.IsSelected = false;
-            Projects.Remove(project);
-            if (wasSelected && Projects.FirstOrDefault() is { } next) SelectProject(next);
+            await _workspaceChanges.WaitAsync();
+            try
+            {
+                await SaveProjectsAsync(Projects.Where(p => p != project));
+                _workspaceInteraction.CloseProject(project.Id);
+                var wasSelected = project.IsSelected;
+                project.IsSelected = false;
+                Projects.Remove(project);
+                if (wasSelected && Projects.FirstOrDefault() is { } next) SelectProject(next);
+            }
+            finally { _workspaceChanges.Release(); }
             Feedback = $"{project.Name} removed from DevDock. No local files were deleted.";
             return true;
         }
@@ -87,9 +171,10 @@ public partial class DashboardViewModel : ObservableObject
 
     private bool ContainsProject(string root) => Projects.Any(p => ProjectPath.Comparer.Equals(p.Path, root));
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanAddProject))]
     private async Task AddProjectAsync()
     {
+        if (!_workspaceLoaded) return;
         if (_importInteraction is null) { Feedback = "Folder selection is unavailable until the desktop window is ready."; return; }
         try
         {
@@ -121,10 +206,16 @@ public partial class DashboardViewModel : ObservableObject
                 return;
             }
             var project = ProjectViewModel.FromDiscovery(result);
-            AttachProject(project);
-            Projects.Insert(0, project);
-            SelectProject(project);
-            Feedback = $"{project.Name} added · local project · available for this session";
+            await _workspaceChanges.WaitAsync();
+            try
+            {
+                await SaveProjectsAsync(new[] { project }.Concat(Projects));
+                AttachProject(project);
+                Projects.Insert(0, project);
+                SelectProject(project);
+            }
+            finally { _workspaceChanges.Release(); }
+            Feedback = $"{project.Name} added · workspace saved automatically";
             ProjectImported?.Invoke();
         }
         catch (Exception ex)
@@ -133,6 +224,7 @@ public partial class DashboardViewModel : ObservableObject
             Feedback = "Project could not be imported.";
             var message = ex switch
             {
+                _ when HasWorkspaceError => WorkspaceError,
                 UnauthorizedAccessException => "DevDock cannot access this folder. Choose a folder you have permission to read.",
                 IOException => "The selected folder could not be read. Check that it is still available and choose it again.",
                 NotSupportedException => ex.Message,
@@ -151,6 +243,7 @@ public partial class DashboardViewModel : ObservableObject
         IsRefreshing = true;
         try
         {
+            if (Ports.RefreshCommand.CanExecute(null)) await Ports.RefreshCommand.ExecuteAsync(null);
             foreach (var project in Projects.ToArray())
                 if (project.Workspace?.Git.RefreshCommand.CanExecute(null) == true) await project.Workspace.Git.RefreshCommand.ExecuteAsync(null);
             Feedback = $"Workspace refreshed at {DateTime.Now:HH:mm:ss}";

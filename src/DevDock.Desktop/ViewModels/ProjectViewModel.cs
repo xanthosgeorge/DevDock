@@ -12,7 +12,10 @@ public partial class ProjectViewModel : ObservableObject
     [ObservableProperty] private string _gitStatus = "";
     public required string LastActivity { get; init; }
     public required string[] Technologies { get; init; }
-    public Guid Id { get; } = Guid.NewGuid();
+    public Guid Id { get; init; } = Guid.NewGuid();
+    [ObservableProperty] private string _locationNotice = "";
+    public bool HasLocationNotice => LocationNotice.Length > 0;
+    partial void OnLocationNoticeChanged(string value) => OnPropertyChanged(nameof(HasLocationNotice));
     [ObservableProperty] private ProjectWorkspaceViewModel? _workspace;
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RemoveCommand))] private bool _isRemoving;
     public string OriginLabel => "LOCAL";

@@ -14,8 +14,9 @@ public sealed class ProjectRunnerService : IProjectRunnerService
     private readonly Dictionary<Guid, Entry> _owned = [];
     private bool _shuttingDown;
 
-    public Task<ProjectProcess> StartAsync(ProjectRunConfiguration configuration) => Task.Run(() =>
+    public Task<ProjectProcess> StartAsync(ProjectRunConfiguration configuration) => Task.Run(async () =>
     {
+        var expected = await RuntimeEndpointDetector.ReadExpectedAsync(configuration);
         lock (_gate)
         {
             if (_shuttingDown) throw new InvalidOperationException("DevDock is shutting down; no new project processes can be started.");
@@ -24,7 +25,11 @@ public sealed class ProjectRunnerService : IProjectRunnerService
             var process = new Process { StartInfo = ProcessLaunch.Create(configuration.Executable, configuration.Arguments, configuration.WorkingDirectory) };
             try { process.Start(); }
             catch { process.Dispose(); throw; }
-            var session = new ProjectProcess(process.Id, configuration);
+            DateTimeOffset? osStart = null;
+            try { osStart = new DateTimeOffset(process.StartTime.ToUniversalTime()); }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException) { }
+            var session = new ProjectProcess(process.Id, configuration, osStart);
+            session.SetExpectedEndpoints(expected);
             var entry = new Entry(session, process);
             _owned.Add(session.Id, entry);
             session.AddOutput("> " + configuration.DisplayCommand);

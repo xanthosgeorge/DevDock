@@ -12,6 +12,7 @@ public partial class ProjectWorkspaceViewModel : ObservableObject
     private readonly IProjectRunnerService _runner;
     private readonly IProjectRunConfigurationService _configurations;
     private readonly IProjectWorkspaceInteraction? _interaction;
+    private readonly IPlatformService? _platform;
     private ProjectProcess? _process;
     private ProjectRunConfiguration? _chosenConfiguration;
     private long _lastOutputSequence;
@@ -19,6 +20,10 @@ public partial class ProjectWorkspaceViewModel : ObservableObject
     public ProjectViewModel Project { get; }
     public GitWorkspaceViewModel Git { get; }
     public ObservableCollection<ProjectOutputLine> Output { get; } = [];
+    public ObservableCollection<EndpointViewModel> Endpoints { get; } = [];
+    public bool HasEndpoints => Endpoints.Count > 0;
+    public string EndpointHeading => Project.IsRunning ? "Endpoints" : "Last known endpoints · not running";
+    public event Action? RuntimeChanged;
     public ProjectProcess? Process => _process;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _autoScroll = true;
@@ -36,9 +41,10 @@ public partial class ProjectWorkspaceViewModel : ObservableObject
     partial void OnIsBusyChanged(bool value) => UpdateCommands();
 
     public ProjectWorkspaceViewModel(ProjectViewModel project, IGitService git, IProjectRunnerService runner,
-        IProjectRunConfigurationService configurations, IProjectWorkspaceInteraction? interaction)
+        IProjectRunConfigurationService configurations, IProjectWorkspaceInteraction? interaction, IPlatformService? platform = null)
     {
         Project = project; Git = new(git, project); _runner = runner; _configurations = configurations; _interaction = interaction;
+        _platform = platform;
         project.PropertyChanged += (_, e) => { if (e.PropertyName is nameof(project.IsRunning) or nameof(project.IsRemoving)) UpdateCommands(); };
     }
 
@@ -72,6 +78,8 @@ public partial class ProjectWorkspaceViewModel : ObservableObject
             _chosenConfiguration = configuration; OnPropertyChanged(nameof(LaunchSummary));
             if (_process is not null) _process.Updated -= QueueProcessUpdate;
             SelectedTabIndex = 2; Output.Clear(); _lastOutputSequence = 0;
+            Endpoints.Clear(); OnPropertyChanged(nameof(HasEndpoints));
+            _process = null; Project.IsRunning = false;
             Operation = "Starting…";
             _process = await _runner.StartAsync(configuration);
             _process.Updated += QueueProcessUpdate;
@@ -104,12 +112,22 @@ public partial class ProjectWorkspaceViewModel : ObservableObject
     private void SyncProcess()
     {
         if (_process is null) return;
+        var stateChanged = Project.IsRunning != _process.IsRunning;
         Project.IsRunning = _process.IsRunning;
         foreach (var line in _process.GetOutput().Where(l => l.Sequence > _lastOutputSequence))
         {
             Output.Add(line); _lastOutputSequence = line.Sequence;
         }
         while (Output.Count > 2000) Output.RemoveAt(0);
+        var endpoints = _process.GetEndpoints().OrderBy(e => PortAssociation.IsSpecialPath(e.Url)).ThenBy(e => e.Name != "Frontend").ToArray();
+        var endpointsChanged = !Endpoints.Select(e => e.Endpoint).SequenceEqual(endpoints);
+        if (endpointsChanged)
+        {
+            Endpoints.Clear();
+            foreach (var endpoint in endpoints) Endpoints.Add(new(endpoint, _platform, message => Error = message, Endpoints.Count == 0));
+        }
+        OnPropertyChanged(nameof(HasEndpoints)); OnPropertyChanged(nameof(EndpointHeading));
+        if (stateChanged || endpointsChanged) RuntimeChanged?.Invoke();
         if (!_process.IsRunning && _process.ExitCode != 0) Error = $"Project exited with code {_process.ExitCode}. View Output for details.";
         OnPropertyChanged(nameof(Process)); OnPropertyChanged(nameof(HasOutput)); UpdateCommands();
     }

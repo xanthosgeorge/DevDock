@@ -17,6 +17,7 @@
         <TextBlock Text="{Binding GitStatus}" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
       </WrapPanel>
       <StackPanel Orientation="Horizontal" Spacing="8"><c:StatusIndicator State="{Binding LocalProcessState}" ShowText="False" /><TextBlock Text="{Binding LocalRunState}" Classes="caption" /></StackPanel>
+      <TextBlock Text="{Binding LocationNotice}" IsVisible="{Binding HasLocationNotice}" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap" FontSize="12" />
       <WrapPanel>
         <Button Classes="primary" Content="{Binding Workspace.RunLabel}" Command="{Binding Workspace.RunStopCommand}" Margin="0,0,8,4" />
         <Button Content="Open" Command="{Binding OpenProjectCommand}" Margin="0,0,8,4" />
