@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DevDock.Desktop.ViewModels"
+        xmlns:m="using:DevDock.Desktop.Models"
+        xmlns:c="using:DevDock.Desktop.Controls"
+        x:Class="DevDock.Desktop.Views.ProjectImportWindow"
+        x:DataType="vm:ProjectImportViewModel"
+        Title="{Binding Title}" Width="560" SizeToContent="Height" MaxHeight="640"
+        CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BackgroundBrush}">
+  <Grid RowDefinitions="Auto,Auto,Auto" Margin="24" RowSpacing="20">
+    <StackPanel Spacing="8">
+      <TextBlock Text="LOCAL PROJECT" Classes="caption" LetterSpacing="2" Foreground="{DynamicResource AccentBrush}" />
+      <TextBlock Text="{Binding Title}" FontSize="25" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding Description}" Classes="muted" TextWrapping="Wrap" LineHeight="21" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" MaxHeight="360" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsPreview}">
+      <StackPanel Spacing="16">
+        <Border Classes="panel" Padding="16"><StackPanel Spacing="7">
+          <TextBlock Text="{Binding Name}" Classes="projectName" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding RootPath}" Classes="caption" TextWrapping="Wrap" />
+        </StackPanel></Border>
+        <StackPanel Spacing="8">
+          <TextBlock Text="Technologies" Classes="section" />
+          <ItemsControl ItemsSource="{Binding Technologies}">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><c:TechnologyBadge Text="{Binding}" Margin="0,0,0,6" /></DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Spacing="10">
+          <TextBlock Text="Detected" Classes="section" />
+          <TextBlock Text="{Binding GitSummary}" Foreground="{DynamicResource MutedBrush}" />
+          <ItemsControl ItemsSource="{Binding ProjectFiles}"><ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="m:DetectedProjectFile">
+              <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,10">
+                <TextBlock Text="✓" Foreground="{DynamicResource SuccessBrush}" Margin="0,0,10,0" />
+                <StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Kind}" /><TextBlock Text="{Binding RelativePath}" Classes="caption" TextWrapping="Wrap" /></StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate></ItemsControl>
+        </StackPanel>
+        <Border Classes="panel" IsVisible="{Binding HasWarnings}" Padding="12">
+          <StackPanel Spacing="8"><TextBlock Text="Some details could not be inspected" Foreground="{DynamicResource WarningBrush}" />
+            <ItemsControl ItemsSource="{Binding Warnings}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><TextBlock Text="{Binding}" Classes="caption" TextWrapping="Wrap" Margin="0,0,0,6" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+          </StackPanel>
+        </Border>
+        <TextBlock Text="Added projects stay in memory for this session. Services and Git status are not monitored yet." Classes="caption" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+      <Button Content="{Binding DismissLabel}" Command="{Binding CancelCommand}" IsCancel="True" />
+      <Button Classes="primary" Content="Add Project" Command="{Binding ConfirmCommand}" IsVisible="{Binding IsPreview}" IsDefault="True" />
+    </StackPanel>
+  </Grid>
+</Window>

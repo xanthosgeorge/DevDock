@@ -4,7 +4,7 @@
       <Grid.ColumnDefinitions><ColumnDefinition Width="{Binding ProjectWidth}" /><ColumnDefinition Width="{Binding ColumnGap}" /><ColumnDefinition Width="{Binding EnvironmentWidth}" /></Grid.ColumnDefinitions>
       <ScrollViewer IsVisible="{Binding ShowProjects}" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
-          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12"><TextBlock Classes="section" Text="Projects" /><TextBlock Grid.Column="1" Classes="caption" Text="4 projects" VerticalAlignment="Center" /></Grid>
+          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12"><TextBlock Classes="section" Text="Projects" /><TextBlock Grid.Column="1" Classes="caption" Text="{Binding Dashboard.ProjectCountLabel}" VerticalAlignment="Center" /></Grid>
           <ItemsControl ItemsSource="{Binding Dashboard.Projects}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:ProjectViewModel"><c:ProjectCard /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
         </StackPanel>
       </ScrollViewer>
