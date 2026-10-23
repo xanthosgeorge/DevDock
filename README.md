@@ -4,6 +4,12 @@
 
 DevDock is a cross-platform desktop control center for local software development environments. Import a local project, inspect its stack, run it, read its output and work with its Git repository in one focused workspace.
 
+
+
+## Preview
+
+![DevDock Dashboard](docs/images/dashboard.png)
+
 ## Current status
 
 **DevDock v0.3 — Project Control, Git Workspace, Runtime Endpoints & Ports**
