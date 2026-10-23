@@ -10,16 +10,16 @@ public partial class DashboardViewModel : ObservableObject
 {
     private readonly IProjectDiscoveryService _discovery;
     private readonly IProjectImportInteraction? _importInteraction;
-    public ObservableCollection<ProjectViewModel> Projects { get; } = new(MockDataService.CreateProjects());
-    public DockerContainerViewModel[] Containers { get; } = MockDataService.CreateContainers();
-    public PortViewModel[] Ports { get; } = MockDataService.CreatePorts();
-    public ApiHealthViewModel[] Apis { get; } = MockDataService.CreateApis();
+    private readonly IProjectWorkspaceInteraction? _workspaceInteraction;
+    private readonly IGitService _git;
+    private readonly IProjectRunnerService _runner;
+    private readonly IProjectRunConfigurationService _runConfigurations;
+    public ObservableCollection<ProjectViewModel> Projects { get; } = [];
     public string RunningSummary => $"{Projects.Count(p => p.IsRunning)} Running";
-    public string ContainerSummary => $"{Containers.Length} Containers";
-    public string PortSummary => $"{Ports.Length} Open Ports";
+    public bool IsEmpty => Projects.Count == 0;
     public string ProjectSummary => $"{Projects.Count} Projects";
     public string ProjectCountLabel => $"{Projects.Count} projects";
-    [ObservableProperty] private string _feedback = "Demo environment · local discovery available · service monitoring uses mock data";
+    [ObservableProperty] private string _feedback = "Add a local project to get started · projects are kept for this session";
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private bool _isScanning;
     public string AddProjectLabel => IsScanning ? "Scanning project…" : "＋  Add Project";
@@ -27,30 +27,65 @@ public partial class DashboardViewModel : ObservableObject
     public string RefreshLabel => IsRefreshing ? "↻  Refreshing…" : "↻  Refresh";
     partial void OnIsRefreshingChanged(bool value) => OnPropertyChanged(nameof(RefreshLabel));
     partial void OnIsScanningChanged(bool value) => OnPropertyChanged(nameof(AddProjectLabel));
-    public DashboardViewModel(IProjectDiscoveryService? discovery = null, IProjectImportInteraction? importInteraction = null)
+    public DashboardViewModel(IProjectDiscoveryService? discovery = null, IProjectImportInteraction? importInteraction = null,
+        IProjectWorkspaceInteraction? workspaceInteraction = null, IGitService? git = null,
+        IProjectRunnerService? runner = null, IProjectRunConfigurationService? runConfigurations = null)
     {
         _discovery = discovery ?? new ProjectDiscoveryService();
         _importInteraction = importInteraction;
-        foreach (var project in Projects)
-            AttachProject(project);
+        _workspaceInteraction = workspaceInteraction;
+        _git = git ?? new GitCliService(new CommandRunner());
+        _runner = runner ?? new ProjectRunnerService();
+        _runConfigurations = runConfigurations ?? new ProjectRunConfigurationService(_discovery);
         Projects.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(ProjectSummary));
             OnPropertyChanged(nameof(ProjectCountLabel));
             OnPropertyChanged(nameof(RunningSummary));
+            OnPropertyChanged(nameof(IsEmpty));
         };
-        foreach (var container in Containers)
-            container.StateChanged += () => Feedback = "Container mock state updated · Docker is not connected";
-        SelectProject(Projects[0]);
     }
     private void AttachProject(ProjectViewModel project)
     {
         project.Selected += SelectProject;
-        project.MessageRequested += message => Feedback = message;
         project.StateChanged += () => OnPropertyChanged(nameof(RunningSummary));
+        project.Workspace = new(project, _git, _runner, _runConfigurations, _workspaceInteraction);
+        project.OpenRequested += (item, tab) =>
+        {
+            SelectProject(item);
+            item.Workspace!.SelectedTabIndex = tab;
+            _workspaceInteraction?.OpenProject(item.Workspace);
+        };
+        project.RemoveRequested += async item => { await RemoveProjectAsync(item); };
+        if (_workspaceInteraction is not null) _ = project.Workspace.Git.RefreshCommand.ExecuteAsync(null);
     }
 
-    private bool ContainsProject(string root) => Projects.Any(p => !p.IsDemo && ProjectPath.Comparer.Equals(p.Path, root));
+    public async Task<bool> RemoveProjectAsync(ProjectViewModel project)
+    {
+        if (project.IsRemoving || !Projects.Contains(project) || _workspaceInteraction is null) return false;
+        if (project.Workspace is { IsBusy: true } || project.Workspace?.Git.IsBusy == true)
+        {
+            Feedback = "Wait for the current project/Git operation before removing it.";
+            return false;
+        }
+        project.IsRemoving = true;
+        try
+        {
+            if (!await _workspaceInteraction.ConfirmRemovalAsync(project.Name, project.IsRunning)) return false;
+            if (project.Workspace is not null) await project.Workspace.StopForRemovalAsync();
+            _workspaceInteraction.CloseProject(project.Id);
+            var wasSelected = project.IsSelected;
+            project.IsSelected = false;
+            Projects.Remove(project);
+            if (wasSelected && Projects.FirstOrDefault() is { } next) SelectProject(next);
+            Feedback = $"{project.Name} removed from DevDock. No local files were deleted.";
+            return true;
+        }
+        catch (Exception ex) { Feedback = "Unable to remove project: " + ex.Message; return false; }
+        finally { project.IsRemoving = false; }
+    }
+
+    private bool ContainsProject(string root) => Projects.Any(p => ProjectPath.Comparer.Equals(p.Path, root));
 
     [RelayCommand]
     private async Task AddProjectAsync()
@@ -114,8 +149,12 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand] private async Task RefreshAsync()
     {
         IsRefreshing = true;
-        await Task.Delay(650);
-        Feedback = $"Mock environment refreshed at {DateTime.Now:HH:mm:ss}";
-        IsRefreshing = false;
+        try
+        {
+            foreach (var project in Projects.ToArray())
+                if (project.Workspace?.Git.RefreshCommand.CanExecute(null) == true) await project.Workspace.Git.RefreshCommand.ExecuteAsync(null);
+            Feedback = $"Workspace refreshed at {DateTime.Now:HH:mm:ss}";
+        }
+        finally { IsRefreshing = false; }
     }
 }

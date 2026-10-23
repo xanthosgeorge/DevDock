@@ -16,18 +16,19 @@
         <TextBlock Text="{Binding Branch}" IsVisible="{Binding HasBranch}" FontSize="12" Margin="0,0,16,0" />
         <TextBlock Text="{Binding GitStatus}" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
       </WrapPanel>
-      <ItemsControl ItemsSource="{Binding Services}">
-        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:ServiceViewModel">
-          <Border Classes="service"><StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="8"><c:StatusIndicator State="{Binding State}" ShowText="False" /><TextBlock Text="{Binding Name}" FontSize="12" /></StackPanel><TextBlock Classes="mono muted" Text="{Binding Endpoint}" FontSize="11" /></StackPanel></Border>
-        </DataTemplate></ItemsControl.ItemTemplate>
-      </ItemsControl>
-      <TextBlock Text="Services not monitored yet" Classes="caption" IsVisible="{Binding !IsDemo}" />
+      <StackPanel Orientation="Horizontal" Spacing="8"><c:StatusIndicator State="{Binding LocalProcessState}" ShowText="False" /><TextBlock Text="{Binding LocalRunState}" Classes="caption" /></StackPanel>
       <WrapPanel>
-        <Button Classes="primary" Content="⌘  Open IDE" Command="{Binding OpenIdeCommand}" Margin="0,0,8,4" />
-        <Button Content="›_  Terminal" Command="{Binding OpenTerminalCommand}" Margin="0,0,8,4" />
-        <Button Content="{Binding RepositoryLabel}" Command="{Binding OpenRepositoryCommand}" Margin="0,0,8,4" />
-        <Button Content="{Binding ToggleLabel}" Command="{Binding ToggleCommand}" IsVisible="{Binding IsDemo}" MinWidth="78" Margin="0,0,0,4" />
+        <Button Classes="primary" Content="{Binding Workspace.RunLabel}" Command="{Binding Workspace.RunStopCommand}" Margin="0,0,8,4" />
+        <Button Content="Open" Command="{Binding OpenProjectCommand}" Margin="0,0,8,4" />
+        <Button Content="Git" Command="{Binding OpenRepositoryCommand}" Margin="0,0,8,4" />
+        <Button Content="More  ···" Margin="0,0,0,4">
+          <Button.Flyout><MenuFlyout>
+            <MenuItem Header="Open Project" Command="{Binding OpenProjectCommand}" />
+            <MenuItem Header="{Binding Workspace.RunLabel}" Command="{Binding Workspace.RunStopCommand}" />
+            <Separator />
+            <MenuItem Header="Remove from DevDock" Command="{Binding RemoveCommand}" />
+          </MenuFlyout></Button.Flyout>
+        </Button>
       </WrapPanel>
     </StackPanel>
   </Border>

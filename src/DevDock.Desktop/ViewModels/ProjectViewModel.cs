@@ -8,34 +8,39 @@ public partial class ProjectViewModel : ObservableObject
 {
     public required string Name { get; init; }
     public required string Path { get; init; }
-    public required string Branch { get; init; }
-    public required string GitStatus { get; init; }
+    [ObservableProperty] private string _branch = "";
+    [ObservableProperty] private string _gitStatus = "";
     public required string LastActivity { get; init; }
     public required string[] Technologies { get; init; }
-    public required ServiceViewModel[] Services { get; init; }
-    public string RepositoryLabel { get; init; } = "GitHub";
-    public bool IsDemo { get; init; } = true;
-    public string OriginLabel => IsDemo ? "DEMO" : "LOCAL";
+    public Guid Id { get; } = Guid.NewGuid();
+    [ObservableProperty] private ProjectWorkspaceViewModel? _workspace;
+    [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(RemoveCommand))] private bool _isRemoving;
+    public string OriginLabel => "LOCAL";
     public bool HasBranch => !string.IsNullOrEmpty(Branch);
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isRunning;
-    public string ToggleLabel => IsRunning ? "■  Stop" : "▶  Start";
     public event Action<ProjectViewModel>? Selected;
-    public event Action<string>? MessageRequested;
     public event Action? StateChanged;
-    partial void OnIsRunningChanged(bool value) => OnPropertyChanged(nameof(ToggleLabel));
+    public event Action<ProjectViewModel, int>? OpenRequested;
+    public event Func<ProjectViewModel, Task>? RemoveRequested;
+    private bool CanRemove => !IsRemoving;
+    public string LocalRunState => IsRunning ? "Running · started by DevDock" : "Not running in DevDock";
+    public ServiceState LocalProcessState => IsRunning ? ServiceState.Running : Workspace?.Process is not null ? ServiceState.Stopped : ServiceState.Unknown;
+    partial void OnBranchChanged(string value) => OnPropertyChanged(nameof(HasBranch));
+    partial void OnIsRunningChanged(bool value) { OnPropertyChanged(nameof(LocalRunState)); OnPropertyChanged(nameof(LocalProcessState)); StateChanged?.Invoke(); }
 
     [RelayCommand] private void Select() => Selected?.Invoke(this);
-    [RelayCommand(CanExecute = nameof(IsDemo))] private void Toggle()
+    [RelayCommand] private void OpenRepository() => OpenRequested?.Invoke(this, 1);
+    [RelayCommand] private void OpenProject() => OpenRequested?.Invoke(this, 0);
+    [RelayCommand(CanExecute = nameof(CanRemove))] private async Task RemoveAsync()
     {
-        IsRunning = !IsRunning;
-        foreach (var service in Services) service.State = IsRunning ? ServiceState.Running : ServiceState.Stopped;
-        StateChanged?.Invoke();
-        MessageRequested?.Invoke($"{Name} {(IsRunning ? "started" : "stopped")} · mock state updated");
+        if (RemoveRequested is not null) await RemoveRequested(this);
     }
-    [RelayCommand] private void OpenIde() => MessageRequested?.Invoke("IDE integration coming in DevDock v0.2.");
-    [RelayCommand] private void OpenTerminal() => MessageRequested?.Invoke("Terminal integration coming in DevDock v0.3.");
-    [RelayCommand] private void OpenRepository() => MessageRequested?.Invoke("Git integration coming in DevDock v0.2.");
+    public void ApplyGitStatus(GitRepositoryStatus status)
+    {
+        Branch = status.Branch;
+        GitStatus = status.IsRepository ? status.Summary : "Git not detected";
+    }
 
     public static ProjectViewModel FromDiscovery(ProjectDiscoveryResult result) => new()
     {
@@ -44,9 +49,6 @@ public partial class ProjectViewModel : ObservableObject
         Technologies = result.Technologies.ToArray(),
         Branch = "",
         GitStatus = result.HasGitRepository ? "Git detected" : "Git not detected",
-        LastActivity = "Imported this session",
-        Services = [],
-        RepositoryLabel = "Git",
-        IsDemo = false
+        LastActivity = "Imported this session"
     };
 }

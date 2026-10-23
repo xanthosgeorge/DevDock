@@ -5,50 +5,50 @@
       <ScrollViewer IsVisible="{Binding ShowProjects}" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
           <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,12"><TextBlock Classes="section" Text="Projects" /><TextBlock Grid.Column="1" Classes="caption" Text="{Binding Dashboard.ProjectCountLabel}" VerticalAlignment="Center" /></Grid>
+          <Border Classes="panel" IsVisible="{Binding Dashboard.IsEmpty}" Padding="24">
+            <StackPanel Spacing="16">
+              <TextBlock Text="Your workspace starts here" FontSize="21" FontWeight="SemiBold" />
+              <TextBlock Text="Add your first local project to inspect Git, run it and read its output." Classes="muted" TextWrapping="Wrap" LineHeight="22" />
+              <Button Classes="primary" Content="{Binding Dashboard.AddProjectLabel}" Command="{Binding Dashboard.AddProjectCommand}" HorizontalAlignment="Left" />
+              <TextBlock Text="Imported projects are kept for this application session." Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
           <ItemsControl ItemsSource="{Binding Dashboard.Projects}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:ProjectViewModel"><c:ProjectCard /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
         </StackPanel>
       </ScrollViewer>
       <ScrollViewer Grid.Column="2" IsVisible="{Binding ShowEnvironment}" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Spacing="8">
-          <Border Classes="panel" Padding="12" IsVisible="{Binding ShowDocker}">
-            <StackPanel Spacing="8">
-              <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▤" FontSize="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,9,0" /><TextBlock Grid.Column="1" Classes="section" Text="Docker Containers" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="link" Content="View All" Command="{Binding NavigateCommand}" CommandParameter="Docker" ToolTip.Tip="View All Containers" /></Grid>
+        <StackPanel Spacing="12">
+          <Border Classes="panel" IsVisible="{Binding ShowDocker}">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="▤" FontSize="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,9,0" /><TextBlock Grid.Column="1" Classes="section" Text="Docker Containers" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="link" Content="View All" Command="{Binding NavigateCommand}" CommandParameter="Docker" /></Grid>
               <Border Height="1" Background="{DynamicResource BorderBrush}" />
-              <ItemsControl ItemsSource="{Binding Dashboard.Containers}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:DockerContainerViewModel">
-                <Grid ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,4">
-                  <c:StatusIndicator State="{Binding State}" ShowText="False" Margin="0,0,10,0" />
-                  <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding DisplayUptime}" />
-                  <TextBlock Grid.Column="2" Text="{Binding Port}" Classes="mono muted" VerticalAlignment="Center" Margin="6,0,10,0" />
-                  <Button Grid.Column="3" Content="{Binding ActionLabel}" Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding ActionHint}" AutomationProperties.Name="{Binding ActionHint}" Padding="6,2" MinHeight="22" />
-                </Grid>
-              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <TextBlock Text="Docker is not connected" FontWeight="SemiBold" />
+              <TextBlock Text="Container discovery and control are not available yet." Classes="muted" TextWrapping="Wrap" LineHeight="21" />
             </StackPanel>
           </Border>
-          <Border Classes="panel" Padding="12" IsVisible="{Binding ShowPorts}">
-            <StackPanel Spacing="8">
-              <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="⑂" FontSize="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,9,0" /><TextBlock Grid.Column="1" Classes="section" Text="Open Ports" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="link" Content="View All" Command="{Binding NavigateCommand}" CommandParameter="Ports" ToolTip.Tip="View All Ports" /></Grid>
-              <Grid ColumnDefinitions="62,74,*"><TextBlock Classes="caption" Text="Port" /><TextBlock Grid.Column="1" Classes="caption" Text="Process" /><TextBlock Grid.Column="2" Classes="caption" Text="Project" /></Grid>
+          <Border Classes="panel" IsVisible="{Binding ShowPorts}">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="⑂" FontSize="22" Foreground="{DynamicResource AccentBrush}" Margin="0,0,9,0" /><TextBlock Grid.Column="1" Classes="section" Text="Open Ports" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="link" Content="View All" Command="{Binding NavigateCommand}" CommandParameter="Ports" /></Grid>
               <Border Height="1" Background="{DynamicResource BorderBrush}" />
-              <ItemsControl ItemsSource="{Binding Dashboard.Ports}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:PortViewModel">
-                <Grid ColumnDefinitions="62,74,*" Margin="0,0,0,8"><TextBlock Classes="mono" Text="{Binding Number}" /><TextBlock Grid.Column="1" Text="{Binding Process}" Classes="caption" /><TextBlock Grid.Column="2" Text="{Binding Project}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Project}" /></Grid>
-              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <TextBlock Text="Port detection is not available yet" Classes="muted" TextWrapping="Wrap" LineHeight="21" />
             </StackPanel>
           </Border>
-          <Border Classes="panel" Padding="12" IsVisible="{Binding ShowApis}">
-            <StackPanel Spacing="8">
+          <Border Classes="panel" IsVisible="{Binding ShowApis}">
+            <StackPanel Spacing="12">
               <Grid ColumnDefinitions="Auto,*,Auto"><TextBlock Text="ϟ" FontSize="24" Foreground="{DynamicResource AccentBrush}" Margin="0,0,9,0" /><TextBlock Grid.Column="1" Classes="section" Text="API Health" VerticalAlignment="Center" /><Button Grid.Column="2" Classes="link" Content="View All" Command="{Binding NavigateCommand}" CommandParameter="API Health" /></Grid>
-              <Grid ColumnDefinitions="*,40,Auto"><TextBlock Classes="caption" Text="Name / Status" /><TextBlock Grid.Column="1" Classes="caption" Text="HTTP" /><TextBlock Grid.Column="2" Classes="caption" Text="Latency" /></Grid>
               <Border Height="1" Background="{DynamicResource BorderBrush}" />
-              <ItemsControl ItemsSource="{Binding Dashboard.Apis}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:ApiHealthViewModel">
-                <Grid ColumnDefinitions="*,40,56" Margin="0,0,0,8"><StackPanel Spacing="5"><TextBlock Text="{Binding Name}" FontSize="12" ToolTip.Tip="{Binding Url}" /><c:StatusIndicator State="{Binding State}" /></StackPanel><TextBlock Grid.Column="1" Text="{Binding Code}" Classes="mono muted" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding Latency}" Classes="mono muted" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
-              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <TextBlock Text="API health monitoring is not available yet" Classes="muted" TextWrapping="Wrap" LineHeight="21" />
             </StackPanel>
           </Border>
         </StackPanel>
       </ScrollViewer>
     </Grid>
     <Border Classes="panel" IsVisible="{Binding ShowLogs}" VerticalAlignment="Top" Padding="24">
-      <StackPanel Spacing="16"><TextBlock Classes="section" Text="Environment activity" /><TextBlock Classes="muted" Text="A preview of your future activity stream. All entries below are examples." TextWrapping="Wrap" /><TextBlock Classes="mono" Text="10:42:18  INFO   IronLog mock environment ready" /><TextBlock Classes="mono" Text="10:42:19  INFO   5 sample containers loaded" /><TextBlock Classes="mono" Text="10:42:20  WARN   Example API returned a mock 503" /><TextBlock Classes="caption" Text="Live logs are planned for DevDock v0.6." /></StackPanel>
+      <StackPanel Spacing="16">
+        <TextBlock Classes="section" Text="Environment activity" />
+        <TextBlock Classes="muted" Text="The workspace activity feed is not available yet. Run a local project and open its Output tab for live stdout and stderr." TextWrapping="Wrap" LineHeight="22" />
+        <Button Content="Open Projects" Command="{Binding NavigateCommand}" CommandParameter="Projects" HorizontalAlignment="Left" />
+      </StackPanel>
     </Border>
   </Grid>
 </UserControl>

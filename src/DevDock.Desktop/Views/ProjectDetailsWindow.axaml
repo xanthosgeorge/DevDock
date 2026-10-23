@@ -1,0 +1,105 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DevDock.Desktop.ViewModels" xmlns:m="using:DevDock.Desktop.Models" xmlns:c="using:DevDock.Desktop.Controls"
+        x:Class="DevDock.Desktop.Views.ProjectDetailsWindow" x:DataType="vm:ProjectWorkspaceViewModel"
+        Title="{Binding Project.Name}" Width="1060" Height="780" MinWidth="850" MinHeight="620"
+        WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}">
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="24" RowSpacing="14">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="6"><TextBlock Text="{Binding Project.Name}" Classes="heading" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Project.Name}" /><TextBlock Text="{Binding Project.Path}" Classes="caption" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Project.Path}" /></StackPanel>
+      <StackPanel Grid.Column="1" Spacing="6" Margin="16,0,0,0"><Button Classes="primary" Content="{Binding RunLabel}" Command="{Binding RunStopCommand}" /><StackPanel Orientation="Horizontal" Spacing="6"><c:StatusIndicator State="{Binding Project.LocalProcessState}" ShowText="False" /><TextBlock Text="{Binding RunState}" Classes="caption" /></StackPanel></StackPanel>
+    </Grid>
+    <ItemsControl Grid.Row="1" ItemsSource="{Binding Project.Technologies}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><c:TechnologyBadge Text="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+    <StackPanel Grid.Row="2" Spacing="6">
+      <TextBlock Text="{Binding Operation}" Classes="caption" />
+      <Border Classes="panel" IsVisible="{Binding HasError}" Padding="12"><TextBlock Text="{Binding Error}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" /></Border>
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+    </StackPanel>
+    <TabControl Grid.Row="3" SelectedIndex="{Binding SelectedTabIndex}">
+      <TabItem Header="Overview">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="18" Margin="0,18,0,0">
+          <Border Classes="panel"><StackPanel Spacing="12">
+            <TextBlock Text="Launch configuration" Classes="section" />
+            <TextBlock Text="{Binding LaunchSummary}" Classes="mono muted" TextWrapping="Wrap" />
+            <Button Content="Choose launch target" Command="{Binding ChooseLaunchTargetCommand}" HorizontalAlignment="Left" />
+            <TextBlock Text="Only explicitly runnable projects and existing start/dev/serve scripts are offered. No dependency installation is performed by DevDock." Classes="caption" TextWrapping="Wrap" />
+          </StackPanel></Border>
+          <Border Classes="panel"><StackPanel Spacing="12">
+            <TextBlock Text="DevDock process" Classes="section" />
+            <TextBlock Text="{Binding RunState}" />
+            <TextBlock Text="{Binding Process.Pid, StringFormat='PID: {0}'}" Classes="mono muted" />
+            <TextBlock Text="{Binding Process.StartTime, StringFormat='Started: {0:yyyy-MM-dd HH:mm:ss}'}" Classes="caption" />
+            <TextBlock Text="{Binding Process.Configuration.WorkingDirectory}" Classes="caption" TextWrapping="Wrap" />
+            <TextBlock Text="Stop terminates only the process tree launched and tracked by DevDock. Closing DevDock stops its active project processes." Classes="caption" TextWrapping="Wrap" />
+          </StackPanel></Border>
+          <Border Classes="panel"><StackPanel Spacing="10">
+            <TextBlock Text="Workspace entry" Classes="section" />
+            <TextBlock Text="This project is kept in memory for this session. Removing it from DevDock does not delete any local files." Classes="muted" TextWrapping="Wrap" />
+            <Button Content="Remove from DevDock" Command="{Binding Project.RemoveCommand}" HorizontalAlignment="Left" />
+          </StackPanel></Border>
+        </StackPanel></ScrollViewer>
+      </TabItem>
+      <TabItem Header="Git">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12" Margin="0,16,0,0" DataContext="{Binding Git}" x:DataType="vm:GitWorkspaceViewModel">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="4"><TextBlock Text="{Binding Branch}" Classes="section" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Branch}" /><TextBlock Text="{Binding Summary}" Classes="caption" /></StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"><Button Content="Refresh" Command="{Binding RefreshCommand}" /><Button Content="Fetch" Command="{Binding FetchCommand}" /><Button Content="Pull" Command="{Binding PullCommand}" ToolTip.Tip="Fast-forward only. Local changes are never discarded or automatically stashed." /></StackPanel>
+          </Grid>
+          <StackPanel Grid.Row="1" Spacing="6">
+            <TextBlock Text="{Binding Message}" Classes="caption" TextWrapping="Wrap" />
+            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+            <ItemsControl ItemsSource="{Binding Remotes}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="m:GitRemote"><Grid ColumnDefinitions="Auto,*"><TextBlock Text="{Binding Name}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,0,10,0" /><TextBlock Grid.Column="1" Classes="caption" Text="{Binding DisplayUrl}" ToolTip.Tip="{Binding DisplayUrl}" TextTrimming="CharacterEllipsis" /></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            <TextBlock Text="This project is not a Git repository." IsVisible="{Binding IsNotRepository}" Classes="muted" />
+          </StackPanel>
+          <Border Grid.Row="2" Classes="panel" Padding="12" IsVisible="{Binding HasError}" MaxHeight="150"><ScrollViewer><SelectableTextBlock Text="{Binding Error}" Foreground="{DynamicResource ErrorBrush}" TextWrapping="Wrap" /></ScrollViewer></Border>
+          <Grid Grid.Row="3" ColumnDefinitions="1.2*,18,*" IsVisible="{Binding IsRepository}">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="12">
+              <TextBlock Text="{Binding ChangesHeading}" Classes="section" />
+              <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Stage Selected" Command="{Binding StageSelectedCommand}" /><Button Content="Stage All" Command="{Binding StageAllCommand}" /></StackPanel>
+              <ItemsControl ItemsSource="{Binding Changes}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GitChangeViewModel">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,5"><CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Code}" Classes="mono" Width="27" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" VerticalAlignment="Center" /><Button Grid.Column="3" Content="Stage" Classes="link" Command="{Binding $parent[Window].((vm:ProjectWorkspaceViewModel)DataContext).Git.StageFileCommand}" CommandParameter="{Binding}" /></Grid>
+              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <TextBlock Text="No unstaged changes." IsVisible="{Binding !HasChanges}" Classes="caption" />
+              <Border Height="1" Background="{DynamicResource BorderBrush}" />
+              <TextBlock Text="{Binding StagedHeading}" Classes="section" />
+              <Button Content="Unstage Selected" Command="{Binding UnstageSelectedCommand}" HorizontalAlignment="Left" />
+              <ItemsControl ItemsSource="{Binding Staged}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:GitChangeViewModel">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,0,0,5"><CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Code}" Classes="mono" Width="27" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" VerticalAlignment="Center" /><Button Grid.Column="3" Content="Unstage" Classes="link" Command="{Binding $parent[Window].((vm:ProjectWorkspaceViewModel)DataContext).Git.UnstageFileCommand}" CommandParameter="{Binding}" /></Grid>
+              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <TextBlock Text="No staged changes." IsVisible="{Binding !HasStaged}" Classes="caption" />
+              <TextBlock Text="Commit message" FontWeight="SemiBold" />
+              <TextBox Text="{Binding CommitMessage}" PlaceholderText="Describe your changes…" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="76" IsEnabled="{Binding !IsBusy}" />
+              <Button Classes="primary" Content="Commit" Command="{Binding CommitCommand}" HorizontalAlignment="Right" />
+              <TextBlock Text="Commit stays local. DevDock does not push." Classes="caption" />
+            </StackPanel></ScrollViewer>
+            <Border Grid.Column="2" Classes="panel" Padding="14">
+              <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12"><TextBlock Text="{Binding HistoryHeading}" Classes="section" />
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"><StackPanel>
+                  <TextBlock Text="No commits yet." IsVisible="{Binding IsHistoryEmpty}" Classes="muted" />
+                  <ItemsControl ItemsSource="{Binding History}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="m:GitCommit">
+                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,12" Margin="0,0,0,12"><StackPanel Spacing="6">
+                      <StackPanel Orientation="Horizontal" Spacing="10"><TextBlock Text="{Binding ShortHash}" Classes="mono" Foreground="{DynamicResource AccentBrush}" /><TextBlock Text="{Binding HeadLabel}" FontSize="11" Foreground="{DynamicResource SuccessBrush}" /></StackPanel>
+                      <TextBlock Text="{Binding Message}" TextWrapping="Wrap" /><TextBlock Text="{Binding Author}" Classes="caption" /><TextBlock Text="{Binding DateLabel}" Classes="caption" />
+                    </StackPanel></Border>
+                  </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </StackPanel></ScrollViewer>
+                <Button Grid.Row="2" Content="Load More" Command="{Binding LoadMoreCommand}" IsVisible="{Binding CanLoadMore}" />
+              </Grid>
+            </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+      <TabItem Header="Output">
+        <Grid RowDefinitions="Auto,*" RowSpacing="12" Margin="0,16,0,0">
+          <Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="Read-only process output · latest 2,000 lines" Classes="caption" VerticalAlignment="Center" /><CheckBox Grid.Column="1" Content="Auto-scroll" IsChecked="{Binding AutoScroll}" Margin="8,0,14,0" /><Button Grid.Column="2" Content="Clear" Command="{Binding ClearOutputCommand}" /></Grid>
+          <Border Grid.Row="1" Classes="panel" Padding="12">
+            <ScrollViewer x:Name="OutputScroll" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel><TextBlock Text="Run this project to capture stdout and stderr here." IsVisible="{Binding !HasOutput}" Classes="muted" />
+                <ItemsControl ItemsSource="{Binding Output}"><ItemsControl.ItemTemplate><DataTemplate x:DataType="m:ProjectOutputLine"><SelectableTextBlock Text="{Binding Display}" Classes="consoleLine" Classes.error="{Binding IsError}" TextWrapping="Wrap" Margin="0,0,0,3" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </Border>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</Window>

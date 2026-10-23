@@ -7,6 +7,18 @@ namespace DevDock.Desktop.Tests;
 
 public sealed class ProjectImportTests
 {
+    [Fact]
+    public async Task WorkspaceStartsEmptyAndRefreshKeepsItEmpty()
+    {
+        var dashboard = new DashboardViewModel();
+        Assert.Empty(dashboard.Projects);
+        Assert.True(dashboard.IsEmpty);
+        Assert.Equal("0 Projects", dashboard.ProjectSummary);
+        Assert.Equal("0 Running", dashboard.RunningSummary);
+        await dashboard.RefreshCommand.ExecuteAsync(null);
+        Assert.Empty(dashboard.Projects);
+        Assert.True(dashboard.IsEmpty);
+    }
     private static ProjectDiscoveryResult Result(string path) => new()
     {
         Name = "Detected project", RootPath = ProjectPath.Normalize(path), IsSupported = true,
@@ -21,21 +33,20 @@ public sealed class ProjectImportTests
         var main = new MainWindowViewModel(dashboard);
         main.NavigateCommand.Execute("Docker");
         await dashboard.AddProjectCommand.ExecuteAsync(null);
-        Assert.Equal(5, dashboard.Projects.Count);
-        Assert.Equal("5 Projects", dashboard.ProjectSummary);
-        Assert.Equal("5 projects", dashboard.ProjectCountLabel);
-        Assert.Equal("3 Running", dashboard.RunningSummary);
+        Assert.Single(dashboard.Projects);
+        Assert.False(dashboard.IsEmpty);
+        Assert.Equal("1 Projects", dashboard.ProjectSummary);
+        Assert.Equal("1 projects", dashboard.ProjectCountLabel);
+        Assert.Equal("0 Running", dashboard.RunningSummary);
         Assert.Equal("Projects", main.PageTitle);
         var project = dashboard.Projects[0];
-        Assert.False(project.IsDemo);
+        Assert.Equal("LOCAL", project.OriginLabel);
         Assert.True(project.IsSelected);
         Assert.Single(dashboard.Projects, p => p.IsSelected);
         Assert.Equal("Git detected", project.GitStatus);
         Assert.Empty(project.Branch);
-        Assert.Empty(project.Services);
-        Assert.False(project.ToggleCommand.CanExecute(null));
         Assert.False(project.IsRunning);
-        Assert.Equal(4, dashboard.Projects.Count(p => p.IsDemo));
+        Assert.Equal(ProjectPath.Normalize(interaction.Path!), project.Path);
     }
 
     [Fact]
@@ -46,7 +57,7 @@ public sealed class ProjectImportTests
         var dashboard = new DashboardViewModel(discovery, interaction);
         await dashboard.AddProjectCommand.ExecuteAsync(null);
         Assert.Equal(0, discovery.Calls);
-        Assert.Equal(4, dashboard.Projects.Count);
+        Assert.Empty(dashboard.Projects);
         Assert.Null(interaction.Preview);
     }
 
@@ -57,8 +68,8 @@ public sealed class ProjectImportTests
         var dashboard = new DashboardViewModel(new FakeDiscovery(Result(interaction.Path!)), interaction);
         await dashboard.AddProjectCommand.ExecuteAsync(null);
         Assert.NotNull(interaction.Preview);
-        Assert.Equal(4, dashboard.Projects.Count);
-        Assert.Single(dashboard.Projects, p => p.IsSelected);
+        Assert.Empty(dashboard.Projects);
+        Assert.True(dashboard.IsEmpty);
     }
 
     [Fact]
@@ -70,7 +81,7 @@ public sealed class ProjectImportTests
         await dashboard.AddProjectCommand.ExecuteAsync(null);
         interaction.Path = Path.Combine(interaction.Path!, ".") + Path.DirectorySeparatorChar;
         await dashboard.AddProjectCommand.ExecuteAsync(null);
-        Assert.Equal(5, dashboard.Projects.Count);
+        Assert.Single(dashboard.Projects);
         Assert.Equal(1, discovery.Calls);
         Assert.Contains("already in DevDock", interaction.LastMessage);
     }
@@ -92,7 +103,7 @@ public sealed class ProjectImportTests
         await dashboard.AddProjectCommand.ExecuteAsync(null);
         Assert.Null(interaction.Preview);
         Assert.Contains("No supported development project", interaction.LastMessage);
-        Assert.Equal(4, dashboard.Projects.Count);
+        Assert.Empty(dashboard.Projects);
     }
 
     [Fact]
@@ -120,7 +131,7 @@ public sealed class ProjectImportTests
         Assert.False(dashboard.IsScanning);
         Assert.True(dashboard.AddProjectCommand.CanExecute(null));
         Assert.Contains("permission", interaction.LastMessage);
-        Assert.Equal(4, dashboard.Projects.Count);
+        Assert.Empty(dashboard.Projects);
     }
 
     [Fact]
