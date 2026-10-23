@@ -1,0 +1,6 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:DevDock.Desktop.Controls" x:Class="DevDock.Desktop.Controls.StatusIndicator" x:DataType="local:StatusIndicator">
+  <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+    <Ellipse Width="8" Height="8" Fill="{Binding DotBrush, RelativeSource={RelativeSource AncestorType=local:StatusIndicator}}" />
+    <TextBlock FontSize="11" IsVisible="{Binding ShowText, RelativeSource={RelativeSource AncestorType=local:StatusIndicator}}" Text="{Binding State, RelativeSource={RelativeSource AncestorType=local:StatusIndicator}}" />
+  </StackPanel>
+</UserControl>

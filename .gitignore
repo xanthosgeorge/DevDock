@@ -1,0 +1,23 @@
+# .NET / Avalonia
+**/bin/
+**/obj/
+.avalonia-build-tasks/
+**/.avalonia-build-tasks/
+TestResults/
+*.user
+*.suo
+*.cache
+*.log
+# IDEs
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+# Local publish output
+artifacts/

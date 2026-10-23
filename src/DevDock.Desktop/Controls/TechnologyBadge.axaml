@@ -1,0 +1,5 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="using:DevDock.Desktop.Controls" x:Class="DevDock.Desktop.Controls.TechnologyBadge" x:DataType="local:TechnologyBadge">
+  <Border Background="{DynamicResource ElevatedBrush}" CornerRadius="4" Padding="7,3" Margin="0,0,6,0">
+    <TextBlock Text="{Binding Text, RelativeSource={RelativeSource AncestorType=local:TechnologyBadge}}" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
+  </Border>
+</UserControl>

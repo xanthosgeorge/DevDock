@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:vm="using:DevDock.Desktop.ViewModels" xmlns:c="using:DevDock.Desktop.Controls" x:Class="DevDock.Desktop.Controls.ProjectCard" x:DataType="vm:ProjectViewModel">
+  <Border Classes="panel projectCard" Classes.selected="{Binding IsSelected}" PointerPressed="CardPressed" Padding="16" Margin="0,0,0,12">
+    <StackPanel Spacing="8">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Border Width="40" Height="36" CornerRadius="7" Background="{DynamicResource ElevatedBrush}" Margin="0,0,12,0">
+          <Path Data="M 1,7 L 1,29 Q 1,32 4,32 L 35,32 Q 38,32 38,29 L 38,10 Q 38,7 35,7 L 17,7 L 12,2 L 4,2 Q 1,2 1,7 Z" Fill="{DynamicResource AccentBrush}" Stretch="Uniform" Margin="4" />
+        </Border>
+        <StackPanel Grid.Column="1"><TextBlock Classes="projectName" Text="{Binding Name}" /><TextBlock Classes="caption" Text="{Binding Path}" TextTrimming="CharacterEllipsis" /></StackPanel>
+        <TextBlock Grid.Column="2" Classes="caption" Text="{Binding LastActivity}" VerticalAlignment="Center" Margin="8,0,0,0" />
+      </Grid>
+      <WrapPanel>
+        <ItemsControl ItemsSource="{Binding Technologies}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate x:DataType="x:String"><c:TechnologyBadge Text="{Binding}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+      </WrapPanel>
+      <WrapPanel Orientation="Horizontal">
+        <TextBlock Text="⑂" Foreground="{DynamicResource AccentBrush}" Margin="0,0,6,0" />
+        <TextBlock Text="{Binding Branch}" FontSize="12" Margin="0,0,16,0" />
+        <TextBlock Text="{Binding GitStatus}" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
+      </WrapPanel>
+      <ItemsControl ItemsSource="{Binding Services}">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:ServiceViewModel">
+          <Border Classes="service"><StackPanel Spacing="4"><StackPanel Orientation="Horizontal" Spacing="8"><c:StatusIndicator State="{Binding State}" ShowText="False" /><TextBlock Text="{Binding Name}" FontSize="12" /></StackPanel><TextBlock Classes="mono muted" Text="{Binding Endpoint}" FontSize="11" /></StackPanel></Border>
+        </DataTemplate></ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <WrapPanel>
+        <Button Classes="primary" Content="⌘  Open IDE" Command="{Binding OpenIdeCommand}" Margin="0,0,8,4" />
+        <Button Content="›_  Terminal" Command="{Binding OpenTerminalCommand}" Margin="0,0,8,4" />
+        <Button Content="{Binding RepositoryLabel}" Command="{Binding OpenRepositoryCommand}" Margin="0,0,8,4" />
+        <Button Content="{Binding ToggleLabel}" Command="{Binding ToggleCommand}" MinWidth="78" Margin="0,0,0,4" />
+      </WrapPanel>
+    </StackPanel>
+  </Border>
+</UserControl>
